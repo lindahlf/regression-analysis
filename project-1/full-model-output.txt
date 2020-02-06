@@ -1,0 +1,26 @@
+Residuals:
+       Min         1Q     Median         3Q        Max 
+-0.0225107 -0.0071735  0.0002816  0.0064878  0.0254670 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  1.156e+00  5.061e-02  22.846  < 2e-16 ***
+age         -1.320e-04  7.392e-05  -1.785  0.07550 .  
+weight       2.378e-04  1.408e-04   1.689  0.09254 .  
+height      -2.594e-05  4.083e-04  -0.064  0.94939    
+neck         1.072e-03  5.371e-04   1.995  0.04720 *  
+chest        1.169e-05  2.360e-04   0.050  0.96056    
+abdomen     -2.200e-03  2.072e-04 -10.618  < 2e-16 ***
+hip          5.268e-04  3.336e-04   1.579  0.11569    
+thigh       -6.343e-04  3.336e-04  -1.901  0.05849 .  
+knee        -3.418e-05  5.640e-04  -0.061  0.95172    
+ankle       -4.449e-04  5.107e-04  -0.871  0.38459    
+biceps      -4.274e-04  3.942e-04  -1.084  0.27940    
+forearm     -1.040e-03  4.527e-04  -2.298  0.02245 *  
+wrist        3.651e-03  1.227e-03   2.976  0.00322 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.009781 on 234 degrees of freedom
+Multiple R-squared:  0.7451,	Adjusted R-squared:  0.731 
+F-statistic: 52.63 on 13 and 234 DF,  p-value: < 2.2e-16
