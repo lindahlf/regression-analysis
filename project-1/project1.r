@@ -29,7 +29,7 @@ men_test_full = fatmen[-train_ind,]
 
 ############ Computing and analyzing full model ############ 
 ############################################################ 
-model.full = lm(density ~ .-density, data = men_train) 
+model.full = lm(density ~ .-density, data = men_train_full) 
 summary(model.full)
 plot(model.full)
 vif(model.full)
