@@ -120,5 +120,28 @@ vif(model.3)
 vif(model.4)
 vif(model.8)
 
+#########  Bootstraping the refined models ######### 
+####################################################
+
+# NOT RUN {
+m1 <- lm(Fertility ~ ., swiss)
+betahat.boot <- Boot(m1, R=99) # 99 bootstrap samples--too small to be useful
+summary(betahat.boot)  # default summary
+confint(betahat.boot)
+hist(betahat.boot)
+# }
+
+betahat.boot.3 = Boot(model.3, R = 2000)
+summary(betahat.boot.3)
+confint(betahat.boot.3)
+hist(betahat.boot.3, main = "Model 3")
+
+mse.boot.3 = Boot(model.3, f = get_mse, R = 2000)
+# TODO: do bootstrap for r squared
+hist(mse.boot.3, main = "Model 3 (MSE)")
 
 
+betahat.boot.4 = Boot(model.4, R = 2000)
+summary(betahat.boot.4)
+confint(betahat.boot.4)
+hist(betahat.boot.4, main = "Model 4")
