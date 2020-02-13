@@ -1,5 +1,7 @@
 library(leaps)
 library(caret)
+library(car)
+library(olsrr)
 
 SI <- function(men){
   # Function to convert the non-SI units to SI 
@@ -8,50 +10,46 @@ SI <- function(men){
   return(men)
 } 
 
-# Import data 
+############ Setting up our data ############ 
+############################################# 
 fatmen = read.csv("bodyfatmen.csv")
 
 # Converting non-SI units to SI units
 fatmen = SI(fatmen)
 
-# Splitting data in two datasets
+# Splitting data in one training and one test set
 ## 80% of the sample size
 smp_size <- floor(0.8 * nrow(fatmen))
 
-## set the seed to make the partition reproducible
-set.seed(1)
+set.seed(37) # set the seed to make the partition reproducible
 train_ind <- sample(seq_len(nrow(fatmen)), size = smp_size)
 men_train = fatmen[train_ind,]
 men_test = fatmen[-train_ind,]
 
 
-# Computing a full model
-model = lm(density ~ .-density, data = men_train) 
-summary(model)
-plot(model)
+############ Computing and analyzing full model ############ 
+############################################################ 
+model.full = lm(density ~ .-density, data = men_train) 
+summary(model.full)
+plot(model.full)
+vif(model.full)
 
-# Computing best subset models 
-regfit.best = regsubsets(density~., data = men_train, nvmax = 13)
+## Influential points
+influ <- influence(model.full)
 
-#Finding best reduced models
-#ols_step_all_possible(model)
-best_model = ols_step_best_subset(model)
+hii = influ$hat
+p = 13
+n = 198
+large.hat = which(hii > 2*p/n) # Shows whichs points are influential 
 
-# # Set up repeated k-fold cross validation   
-# train.control <- trainControl(method = "repeatedcv", number = 10, repeats = 20)
-# # Train the model 
-# step.model <- train(density~. -density, data = men_train,
-#                   tuneGrid = data.frame(nvmax = 1:13),
-#                   method = "leapForward",
+#Cook's distance
+ols_plot_cooksd_chart(model.full)
 
-#                   trControl = train.control
-# )
-# 
-# 
-# plot(step.model$results$RMSE, pch = 19, type = "b", ylab="RMSE")
+#DFFITS
+ols_plot_dffits(model.full)
 
-## k-fold cross validation: recall
-
+#########  k-fold cross validation ######### 
+############################################
 predict.regsubsets <- function(object, newdata, id,...) {
   form <- as.formula(object$call[[2]])
   mat <- model.matrix(form, newdata)
@@ -61,24 +59,56 @@ predict.regsubsets <- function(object, newdata, id,...) {
 }
 
 
-k = 10
-set.seed(1)
-folds = sample (1: k , nrow ( men_train ) , replace = TRUE )
-cv.errors = matrix(NA, k, 13, dimnames = list(NULL,paste (1:13)))
+k = 10 # number of folds
+repeats = 20
+set.seed(37)
+
+repeat.cv.errors = matrix(NA, 13, repeats)
 
 
+#TODO: for each iteration r, store mean.cv.error in a matrix
 
-for(j in 1:k){
-  best.fit = regsubsets(density~., data = men_train[folds != j,], nvmax = 13)
-  for(i in 1:13){
-    pred <- predict(best.fit, men_train[folds == j,] , id = i)
-    cv.errors[j,i] = mean((men_train$density[folds == j]-pred)^2)
+for(r in 1:repeats){
+  
+  folds = sample(1:k, nrow (men_train), replace = TRUE )
+  cv.errors = matrix(NA, k, 13, dimnames = list(NULL, paste(1:13)))
+  for(j in 1:k){
+    best.fit = regsubsets(density~., data = men_train[folds != j,], nvmax = 13)
+    for(i in 1:13){
+      pred <- predict(best.fit, men_train[folds == j,] , id = i)
+      cv.errors[j,i] = mean((men_train$density[folds == j]-pred)^2)
+    }
   }
+  mean.cv.errors = apply(cv.errors, 2, mean)
+  repeat.cv.errors[,r] = mean.cv.errors
 }
 
-mean.cv.errors = apply(cv.errors, 2, mean)
+mean.repeat.cv.errors = apply(repeat.cv.errors, 1, mean)
+
 par(mfrow = c(1 ,1))
-plot(mean.cv.errors, type = 'b')
+plot(mean.repeat.cv.errors, type = 'b', ylab = 'Mean Cross-Validation Error')
+
+### Find that best are 2, 4 and 9
 
 reg.best = regsubsets(density~., data = men_train, nvmax = 13)
+coef(reg.best, 2)
 coef(reg.best, 4)
+coef(reg.best, 9)
+
+#########  Computing reduced models ######### 
+#############################################
+
+model.2 = lm(density ~ weight + abdomen, data = men_train) 
+model.4 = lm(density ~ weight + abdomen + forearm + wrist, data = men_train) 
+model.9 = lm(density ~ age + weight + neck + abdomen + hip + thigh + ankle + forearm + wrist, data = men_train) 
+
+summary(model.2)
+summary(model.4)
+summary(model.9)
+
+vif(model.2)
+vif(model.4)
+vif(model.9)
+
+
+
