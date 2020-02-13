@@ -23,8 +23,8 @@ smp_size <- floor(0.8 * nrow(fatmen))
 
 set.seed(37) # set the seed to make the partition reproducible
 train_ind <- sample(seq_len(nrow(fatmen)), size = smp_size)
-men_train = fatmen[train_ind,]
-men_test = fatmen[-train_ind,]
+men_train_full = fatmen[train_ind,]
+men_test_full = fatmen[-train_ind,]
 
 
 ############ Computing and analyzing full model ############ 
@@ -34,7 +34,7 @@ summary(model.full)
 plot(model.full)
 vif(model.full)
 
-## Influential points
+### Influential points and outliers ### 
 influ <- influence(model.full)
 
 hii = influ$hat
@@ -47,6 +47,15 @@ ols_plot_cooksd_chart(model.full)
 
 #DFFITS
 ols_plot_dffits(model.full)
+
+# Remove outliers 
+men_train <- men_train_full[-c(42, 21),]
+
+# Computing full model with outliers removed 
+no.outlier.model.full = lm(density ~ .-density, data = men_train) 
+summary(no.outlier.model.full)
+plot(no.outlier.model.full)
+vif(no.outlier.model.full)
 
 #########  k-fold cross validation ######### 
 ############################################
@@ -88,27 +97,28 @@ mean.repeat.cv.errors = apply(repeat.cv.errors, 1, mean)
 par(mfrow = c(1 ,1))
 plot(mean.repeat.cv.errors, type = 'b', ylab = 'Mean Cross-Validation Error')
 
-### Find that best are 2, 4 and 9
+### Find that best are 3, 4 and 8 (for our purposes)
 
 reg.best = regsubsets(density~., data = men_train, nvmax = 13)
-coef(reg.best, 2)
+coef(reg.best, 3)
 coef(reg.best, 4)
-coef(reg.best, 9)
+coef(reg.best, 8)
 
 #########  Computing reduced models ######### 
 #############################################
 
-model.2 = lm(density ~ weight + abdomen, data = men_train) 
-model.4 = lm(density ~ weight + abdomen + forearm + wrist, data = men_train) 
-model.9 = lm(density ~ age + weight + neck + abdomen + hip + thigh + ankle + forearm + wrist, data = men_train) 
+model.3 = lm(density ~ age + abdomen + wrist, data = men_train) 
+model.4 = lm(density ~ age + height + abdomen + wrist, data = men_train) 
+model.8 = lm(density ~ age + height + neck + abdomen + 
+               hip + thigh + forearm + wrist, data = men_train) 
 
-summary(model.2)
+summary(model.3)
 summary(model.4)
-summary(model.9)
+summary(model.8)
 
-vif(model.2)
+vif(model.3)
 vif(model.4)
-vif(model.9)
+vif(model.8)
 
 
 
