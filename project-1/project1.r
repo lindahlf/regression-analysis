@@ -4,6 +4,8 @@ library(car)
 library(olsrr)
 library(dvmisc)
 library(rsq)
+library(sjmisc)
+library(boot)
 
 SI <- function(men){
   # Function to convert the non-SI units to SI 
@@ -122,30 +124,31 @@ vif(model.8)
 #########  Bootstraping the refined models ######### 
 ####################################################
 
-# function to obtain R-Squared from the data
-rsq <- function(formula, data, indices) {
-  d <- data[indices,] # allows boot to select sample
-  fit <- lm(formula, data=d)
-  return(summary(fit)$r.square)
-}
 
 betahat.boot.3 = Boot(model.3, R = 1000)
 summary(betahat.boot.3)
 confint(betahat.boot.3)
 hist(betahat.boot.3, main = "Model 3")
 
-mse.boot.3 = Boot(model.3, f = get_mse, R = 1000)
-hist(mse.boot.3, main = "Model 3 (MSE)")
+mse.boot.3 = Boot(model.3, f = get_mse, R = 1000, labels = "MSE")
+hist(mse.boot.3, main = "Model 3 (MSE)", freq = TRUE)
+summary(mse.boot.3)
 
-rsq.boot.3 = Boot(model.3, f = rsq, R = 1000)
-hist(rsq.boot.3, main = "Model 3 (Rsq)")
+mse.boot.4 = Boot(model.4, f = get_mse, R = 1000, labels = "MSE")
+hist(mse.boot.4, main = "Model 4 (MSE)", freq = TRUE)
+summary(mse.boot.4)
 
-rsq.boot.4 = Boot(model.3, f = rsq, R = 1000)
-hist(rsq.boot.4, main = "Model 4 (Rsq)")
+rsq.boot.3 = Boot(model.3, f = rsq, R = 1000, labels = "R-squared")
+hist(rsq.boot.3, main = "Model 3 (Rsq)", freq = TRUE)
+summary(rsq.boot.3)
+
+rsq.boot.4 = Boot(model.4, f = rsq, R = 1000, labels = "R-squared")
+hist(rsq.boot.4, main = "Model 4 (Rsq)", freq = TRUE)
 summary(rsq.boot.4)
-
 
 betahat.boot.4 = Boot(model.4, R = 1000)
 summary(betahat.boot.4)
 confint(betahat.boot.4)
 hist(betahat.boot.4, main = "Model 4")
+
+
