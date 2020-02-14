@@ -2,6 +2,8 @@ library(leaps)
 library(caret)
 library(car)
 library(olsrr)
+library(dvmisc)
+library(rsq)
 
 SI <- function(men){
   # Function to convert the non-SI units to SI 
@@ -74,9 +76,6 @@ set.seed(37)
 
 repeat.cv.errors = matrix(NA, 13, repeats)
 
-
-#TODO: for each iteration r, store mean.cv.error in a matrix
-
 for(r in 1:repeats){
   
   folds = sample(1:k, nrow (men_train), replace = TRUE )
@@ -123,25 +122,30 @@ vif(model.8)
 #########  Bootstraping the refined models ######### 
 ####################################################
 
-# NOT RUN {
-m1 <- lm(Fertility ~ ., swiss)
-betahat.boot <- Boot(m1, R=99) # 99 bootstrap samples--too small to be useful
-summary(betahat.boot)  # default summary
-confint(betahat.boot)
-hist(betahat.boot)
-# }
+# function to obtain R-Squared from the data
+rsq <- function(formula, data, indices) {
+  d <- data[indices,] # allows boot to select sample
+  fit <- lm(formula, data=d)
+  return(summary(fit)$r.square)
+}
 
-betahat.boot.3 = Boot(model.3, R = 2000)
+betahat.boot.3 = Boot(model.3, R = 1000)
 summary(betahat.boot.3)
 confint(betahat.boot.3)
 hist(betahat.boot.3, main = "Model 3")
 
-mse.boot.3 = Boot(model.3, f = get_mse, R = 2000)
-# TODO: do bootstrap for r squared
+mse.boot.3 = Boot(model.3, f = get_mse, R = 1000)
 hist(mse.boot.3, main = "Model 3 (MSE)")
 
+rsq.boot.3 = Boot(model.3, f = rsq, R = 1000)
+hist(rsq.boot.3, main = "Model 3 (Rsq)")
 
-betahat.boot.4 = Boot(model.4, R = 2000)
+rsq.boot.4 = Boot(model.3, f = rsq, R = 1000)
+hist(rsq.boot.4, main = "Model 4 (Rsq)")
+summary(rsq.boot.4)
+
+
+betahat.boot.4 = Boot(model.4, R = 1000)
 summary(betahat.boot.4)
 confint(betahat.boot.4)
 hist(betahat.boot.4, main = "Model 4")
