@@ -1,6 +1,6 @@
 ##########################################################
 ##########################################################
-###################### FULL MODEL  #######################
+################# GROUPED RISK MODEL  ####################
 ##########################################################
 ##########################################################
 
@@ -29,14 +29,41 @@ glmdata <- read.table("Tractors.csv", header=TRUE, sep=";", dec="," )
 ###### You might also want to group other variables from glmdata, in a similar manner
 
 glmdata$weight_group <- cut(glmdata$Weight, 
-                            breaks = c(-Inf, 1000, 2000, 3000, 4000, 5000, Inf), 
-                            labels = c("01_<1000kg", "02_1000-1999kg", "03_2000-2999kg", "04_3000-3999kg", "05_4000-4999kg", "06_>=5000kg"), 
+                            breaks = c(-Inf, 3000, 4000, 5000, Inf), 
+                            labels = c("01_<3000kg", "02_3000-3999kg", "03_4000-4999kg",
+                                       "04_>=5000kg"), 
                             right = FALSE)
 
 glmdata$age_group <- cut(glmdata$VehicleAge, 
-                         breaks = c(-Inf, 3, 6, 15, Inf), 
-                         labels = c("01_<3years", "02_3-5years", "03_6-14years", "04_>14years"), 
+                         breaks = c(-Inf, 6, 15, Inf), 
+                         labels = c("01_<6years", "02_6-14years","03_>14years"), 
                          right = FALSE)
+
+glmdata$ActivityCode <- gsub("G - Wholesale & retail trade; repair of motor vehicles, household", "High risk activity",
+                             glmdata$ActivityCode)
+glmdata$ActivityCode <- gsub("N - Health and social work", "High risk activity",
+                             glmdata$ActivityCode)
+glmdata$ActivityCode <- gsub("F - Construction", "High risk activity",
+                             glmdata$ActivityCode)
+
+
+glmdata$ActivityCode <- gsub("A - Agriculture, Hunting and Forestry", "Normal risk activity",
+                             glmdata$ActivityCode)
+glmdata$ActivityCode <- gsub("H - Hotels and restaurants", "Normal risk activity",
+                             glmdata$ActivityCode)
+glmdata$ActivityCode <- gsub("I - Transport, storage and communication", "Normal risk activity",
+                             glmdata$ActivityCode)
+glmdata$ActivityCode <- gsub("L - Public administration and defence; compulsory social security", "Normal risk activity",
+                             glmdata$ActivityCode)
+glmdata$ActivityCode <- gsub("M - Education", "Normal risk activity",
+                             glmdata$ActivityCode)
+glmdata$ActivityCode <- gsub("C - Mining and quarrying", "Normal risk activity",
+                             glmdata$ActivityCode)
+glmdata$ActivityCode <- gsub("Other", "Normal risk activity",
+                             glmdata$ActivityCode)
+
+
+glmdata$ActivityCode <- as.factor(glmdata$ActivityCode)
 
 # Secondly, we want to aggregate the data.
 # That is, instead of having one row per tractor, we want one row for each existing combination of variables 
@@ -88,14 +115,14 @@ rm(new.cols)
 # The first part of this performs a GLM analysis, with glmdata2 as the data source modelling NoOfClaims, by the Duration. It looks at three variables: weight_group, Climate, and ActivityCode.
 ##### This is where you can modify the model by adding or removing variables 
 
-model.frequency.full <-
+model.frequency.quant <-
   glm(NoOfClaims ~ weight_group + Climate + ActivityCode + age_group + offset(log(Duration)),
       data = glmdata2, family = poisson)
 
 # Then we save the coefficients resulting from the GLM analysis in an array
 ##### You should not need to modify this part of the code
 
-rels <- coef(model.frequency.full)
+rels <- coef(model.frequency.quant)
 rels <- exp(rels[1] + rels[-1])/exp(rels[1])
 
 # Finally, we attach the coefficients to the already prepared table glmdata3, in a column named rels.frequency
@@ -142,12 +169,12 @@ glmdata2$avgclaim=glmdata2$ClaimCost/glmdata2$NoOfClaims
 ##### You need to modify this part of the code in the same way as you did for the GLM model for frequency.  Add or remove variables
 ##### Remember that, according to the project instructions, you need to use the same variables for the severity as for the frequency.
 
-model.severity <-
+model.severity.quant <-
   glm(avgclaim ~ weight_group + Climate + ActivityCode + age_group ,
       data = glmdata2[glmdata2$avgclaim>0,], family = Gamma("log"), weight=NoOfClaims)
 
 # You do not need to change this part
-rels <- coef(model.severity)
+rels <- coef(model.severity.quant)
 rels <- exp( rels[1] + rels[-1] ) / exp( rels[1] )
 glmdata3$rels.severity <- attachRels(rels, glmdata3$duration, cs, cs_rels)
 
@@ -223,7 +250,6 @@ p12 <- ggplot(subset(glmdata3, rating.factor=="Age"), aes(x=class, y=rels.risk))
 multiplot(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12, cols=4)
 
 
-
 ######################### Section 5: Export factors to Excel #########################
 
 #As a last step, the risk factors are exported to excel. 
@@ -231,6 +257,8 @@ multiplot(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12, cols=4)
 
 write.xlsx(glmdata3, "glmfactors.xlsx")
 
-bic.freq.full = BIC(model.frequency.full)
-bic.sev.full = BIC(model.severity.full)
+bic.freq.quant = BIC(model.frequency.quant)
+bic.sev.quant = BIC(model.severity.quant)
+
+
 

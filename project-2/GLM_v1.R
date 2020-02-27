@@ -1,3 +1,11 @@
+
+##########################################################
+##########################################################
+################# INTUITIVE MODEL  #######################
+##########################################################
+##########################################################
+
+
 ###################################################################
 # In this model I have changed: weight group to 2000-4000 kg
 #                             : grouped construction, agriculture and mining into one group: heavy duty
@@ -15,6 +23,7 @@ source("multiplot.R")
 library(ggplot2)
 library(foreach)
 library(openxlsx)
+library(dplyr)
 
 ######################### Section 1: Read data #########################
 
@@ -137,14 +146,14 @@ rm(new.cols)
 # It looks at three variables: weight_group, Climate, and ActivityCode.
 ##### This is where you can modify the model by adding or removing variables 
 
-model.frequency1 <-
+model.frequency.int <-
   glm(NoOfClaims ~ weight_group + Climate + ActivityCode + age_group + offset(log(Duration)),
       data = glmdata2, family = poisson)
 
 # Then we save the coefficients resulting from the GLM analysis in an array
 ##### You should not need to modify this part of the code
 
-rels <- coef(model.frequency1)
+rels <- coef(model.frequency.int)
 rels <- exp(rels[1] + rels[-1])/exp(rels[1])
 
 # Finally, we attach the coefficients to the already prepared table glmdata3,
@@ -207,12 +216,12 @@ glmdata2$avgclaim=glmdata2$ClaimCost/glmdata2$NoOfClaims
 ##### Remember that, according to the project instructions,
 ##### you need to use the same variables for the severity as for the frequency.
 
-model.severity <-
+model.severity.int <-
   glm(avgclaim ~ weight_group + Climate + ActivityCode + age_group ,
       data = glmdata2[glmdata2$avgclaim>0,], family = Gamma("log"), weight=NoOfClaims)
 
 # You do not need to change this part
-rels <- coef(model.severity)
+rels <- coef(model.severity.int)
 rels <- exp( rels[1] + rels[-1] ) / exp( rels[1] )
 glmdata3$rels.severity <- attachRels(rels, glmdata3$duration, cs, cs_rels)
 
@@ -303,8 +312,50 @@ multiplot(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12, cols=4)
 #TODO use "openxlsx" instead
 write.xlsx(glmdata3, "glmfactors.xlsx")
 
-aic_v1 = model.frequency1$aic
-bic_v1 = BIC(model.frequency1)
-loglik = logLik(model.frequency1)
+bic.freq.int = BIC(model.frequency.int)
+bic.sev.int = BIC(model.severity.int)
+
+
+######################### Section 6: calculate price #########################
+
+# price = claim cost / insurance years  
+ins_16 = dplyr::filter(glmdata, RiskYear == 2016, NoOfClaims >= 1)
+ins_16$expect_cost = with(ins_16, ClaimCost/Duration)
+cost_17 = sum(ins_16$expect_cost)
+prem_17 = cost_17/0.9 
+
+##### Calculate base factor 
+foo = dplyr::filter(glmdata, RiskYear == 2016)
+
+######################### Section 6: Base factor ####################################
+
+data.2016 = glmdata[glmdata$RiskYear == 2016, ]
+data.2016$weightedClaimCost = data.2016$ClaimCost / data.2016$Duration
+total.expected.claim = sum(as.numeric(data.2016$weightedClaimCost), na.rm = TRUE)
+total.premium = total.expected.claim / 0.9
+#activityCode * Climate * weight * Age
+
+for ( i in 1:nrow(data.2016)){
+  
+  activityCode = data.2016$ActivityCode[i]
+  activity.rels.risk = glmdata3$rels.risk[glmdata3$class == activityCode]
+  
+  climateCode = data.2016$Climate[i]
+  climate.rels.risk = glmdata3$rels.risk[glmdata3$class == climateCode]
+  
+  weightCode = data.2016$weight_group[i]
+  weight.rels.risk = glmdata3$rels.risk[glmdata3$class == weightCode]
+  
+  ageCode = data.2016$age_group[i]
+  age.rels.risk = glmdata3$rels.risk[glmdata3$class == ageCode]
+  
+  data.2016$unweighted.tariff[i] = activity.rels.risk * climate.rels.risk * weight.rels.risk * age.rels.risk
+  
+}
+
+sum.tariffs = sum(as.numeric(data.2016$unweighted.tariff), na.rm = TRUE)
+base.level = total.premium / sum.tariffs
+
+
 
   
